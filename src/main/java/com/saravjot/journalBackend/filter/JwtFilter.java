@@ -2,6 +2,8 @@ package com.saravjot.journalBackend.filter;
 
 import com.saravjot.journalBackend.service.UserDetailsServiceImp;
 import com.saravjot.journalBackend.utils.JwtUtil;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.security.SignatureException;
 import java.util.HashMap;
 
 @Component
@@ -42,7 +45,6 @@ public class JwtFilter extends OncePerRequestFilter {
 
             String token = authHeader.substring(7); // Remove "Bearer " prefix
             String email = jwtUtil.extractEmail(token);
-            String userId = jwtUtil.extractUserId(token);
             // Validate token and set authentication in context
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                 UserDetails userDetails = userDetailsServiceImp.loadUserByUsername(email);
@@ -52,17 +54,18 @@ public class JwtFilter extends OncePerRequestFilter {
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
-                    HashMap<String, String> userMap = new HashMap<>();
-                    userMap.put("email", email);
-                    userMap.put("id", userId);
-                    request.setAttribute("user", userMap);
-
                 }
             }
-
             chain.doFilter(request, response); // Continue filter chain
-        }catch (Exception e){
-            System.out.println(e);
+        }catch (ExpiredJwtException e) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Token has expired.");
+        } catch (MalformedJwtException e) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.getWriter().write("Invalid JWT Token.");
+        }catch (Exception e) {
+            // Let the exception propagate if it's not related to JWT
+            throw e; // This will allow it to be handled by your global exception handler
         }
     }
 }

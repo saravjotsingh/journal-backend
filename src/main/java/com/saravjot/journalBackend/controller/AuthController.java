@@ -6,6 +6,7 @@ import com.saravjot.journalBackend.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -27,9 +28,12 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody User myUser){
-        System.out.println("mysuer" + myUser);
-        String jwtToken = authService.loginUser(myUser.getEmail(), myUser.getPassword());
-        System.out.println(jwtToken);
-        return new ResponseEntity<>(jwtToken, HttpStatus.OK);
+        try {
+            String jwtToken = authService.loginUser(myUser.getEmail(), myUser.getPassword());
+            System.out.println(jwtToken);
+            return new ResponseEntity<>(jwtToken, HttpStatus.OK);
+        }catch (BadCredentialsException e){
+            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        }
     }
 }

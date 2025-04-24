@@ -1,5 +1,6 @@
 package com.saravjot.journalBackend.controller;
 
+import com.saravjot.journalBackend.dto.PaginatedResult;
 import com.saravjot.journalBackend.entity.Journal;
 import com.saravjot.journalBackend.entity.User;
 import com.saravjot.journalBackend.service.JournalService;
@@ -7,8 +8,10 @@ import com.saravjot.journalBackend.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
@@ -29,17 +32,21 @@ public class JournalController {
 
     @PostMapping()
     public ResponseEntity<?> saveJournal(@RequestBody Journal myjournal){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = (User) authentication.getPrincipal();
+        myjournal.setUser(user.getId());
         Journal journal = journalService.save(myjournal);
         return new ResponseEntity<>(journal, HttpStatus.CREATED);
     }
 
 
     @GetMapping()
-    public ResponseEntity<?> getJournals(HttpServletRequest request){
-        HashMap<String, String> userMap = (HashMap<String, String>) request.getAttribute("user");
-        System.out.println("Journal Controller" +  userMap.get("id"));
-
-        List<Journal> journals = journalService.getAll();
+    public ResponseEntity<?> getJournals(@RequestParam(required = false, name = "page") Integer page, @RequestParam(required = false, name = "pageSize") Integer pageSize ){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        User user = (User) authentication.getPrincipal();
+        int safePageSize = (pageSize == null || pageSize <= 0) ? 10 : pageSize;
+        int safePage = (page == null || page <= 0) ? 1 : page;
+        PaginatedResult journals = journalService.findAll(user.getId(),safePageSize, safePage);
         return new ResponseEntity<>(journals, HttpStatus.OK);
     }
 

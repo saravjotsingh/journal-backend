@@ -34,17 +34,12 @@ public class AuthService {
 
 
     public String loginUser(String email, String password) {
-        try{
             User user = userService.findByEmail(email);
             System.out.println(user);
             authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
             System.out.println("hello" + userDetails);
             return jwtUtil.generateToken(user.getEmail(), user.getId());
-        }catch (Exception e){
-            System.out.println(e);
-            return "";
-        }
     }
 
 }
